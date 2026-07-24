@@ -1,0 +1,208 @@
+## History ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+shopt -s histappend # Don't overwrite history
+HISTCONTROL=ignoredups:ignorespace:erasedups # Ignore duplicate and spaces in history
+HISTSIZE=10000 # History size
+HISTFILESIZE=10000 # History's file size
+HISTTIMEFORMAT="%F %T " # Date format (ex: 2026-07-23 18:30:00)
+export HISTFILE="$HOME/.bash_history" # Change the default location of the bash history file
+export HISTIGNORE="history:cd *:ls *:pwd" # Don't add these commands to history
+
+
+
+
+## Console ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+shopt -s checkwinsize # Update window size after each command
+shopt -s globstar # Enable recursive globbing pattern (**/*)
+shopt -s cdspell # Auto-correct typos in directory paths with 'cd'
+shopt -s autocd # Change directory by typing its path without 'cd'
+shopt -s dirspell # Auto-correct typos during path completion
+shopt -s no_empty_cmd_completion # Do not attempt completion on an empty line
+
+
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)" # Make less be able to display archive content
+
+# Check if the terminal support colors
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# Set the PS1
+if [ "$color_prompt" = yes ]; then
+    # PS1='\[\e[48;5;10;38;5;16m\] \u@\h \[\e[48;5;75;38;5;10m\]\[\e[48;5;75;38;5;16m\] \w $(git branch 2>/dev/null | sed -e '\''/^[^*]/d'\'' -e '\''s/* \(.*\)/\[\e[48;5;238;38;5;75m\]\[\e[48;5;238;38;5;255m\] \1 \[\e[0;38;5;238m\]/'\'')$(git rev-parse --is-inside-work-tree >/dev/null 2>&1 || echo -n "\[\e[0;38;5;75m\]")\[\e[0m\] \$ '
+    eval "$(starship init bash)"
+else
+    PS1='\u@\h:\w\$ ' # Not colored
+fi
+unset color_prompt force_color_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# Enable completion
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+
+
+## Color support ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias dir='dir --color=auto'
+    alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01' # Colored GCC warnings and errors
+
+
+
+## Aliases ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+alias ll='ls -lh'
+alias lla='ls -lah'
+alias la='ls -Ah'
+alias l='ls -CFh'
+
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+alias mkdir='mkdir -p' # Create all the parent directory
+alias free='free -m' # RAM usage in Mo
+alias codium='flatpak run com.vscodium.codium'
+alias ports='sudo netstat -tulanp'
+
+
+
+## Functions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+# Display public IPv4 and IPv6 with clean formatting
+function myip() {
+    printf '──────────── My IP Addresses ────────────\n'
+    printf 'IPv4: '
+    curl -4 -s --connect-timeout 2 ifconfig.me || printf 'Not available'
+    printf '\nIPv6: '
+    curl -6 -s --connect-timeout 2 ifconfig.me || printf 'Not available'
+    printf '\n─────────────────────────────────────────\n'
+}
+
+# Human readable disk usage (Mo/Go)
+function df() {
+    command df -h 2>/dev/null \
+    | awk '
+        NR==1;
+        NR>1 && $1 !~ /\/dev\/loop/ && $1 !~ /efivarfs/ {
+            print $0 | "sort -k6,6"
+        }
+      ' \
+    | sed -E '
+        s/([0-9]{1,2}%)/ \x1b[32m\1\x1b[0m/g
+        s/(9[0-9]%|100%)/ \x1b[31m\1\x1b[0m/g
+    '
+}
+
+# Update package list and upgrade them
+function update() {
+    sudo apt update
+    sudo apt upgrade -y
+    sudo apt autoremove -y
+}
+
+# Full upgrade allowing to install or remove packages to satisfy dependencies
+function full-update() {
+    read -p "Do you want to execute a full upgrade ? [y/N] " -n 1 -r
+    echo "" # Ajoute un saut de ligne propre après la saisie
+
+    # Vérifie si la réponse est 'y' ou 'Y'
+    if [[ ! $REPLY =~ ^[YyOo]$ ]]; then
+        echo "Opération annulée."
+        return 1
+    fi
+
+    sudo apt update
+    sudo apt full-upgrade -y
+    sudo apt autoremove -y
+}
+
+# Automaticly extract tar.gz, zip, rar, etc.
+function extract() {
+  if [ -f "$1" ] ; then
+    case "$1" in
+      *.tar.bz2)   tar xjf "$1"     ;;
+      *.tar.gz)    tar xzf "$1"     ;;
+      *.bz2)       bunzip2 "$1"     ;;
+      *.rar)       unrar x "$1"     ;;
+      *.gz)        gunzip "$1"      ;;
+      *.tar)       tar xvf "$1"     ;;
+      *.tbz2)      tar xjf "$1"     ;;
+      *.tgz)       tar xzf "$1"     ;;
+      *.zip)       unzip "$1"       ;;
+      *.Z)         compress -d "$1" ;;
+      *.7z)        7z x "$1"        ;;
+      *)           echo "'$1' ne peut pas être extrait via extract()" ;;
+    esac
+  else
+    echo "'$1' n'est pas un fichier valide"
+  fi
+}
+
+# Reload the ~/.bashrc
+function reload() {
+    clear
+    source ~/.bashrc && echo "~/.bashrc reloaded"
+}
+
+# Create a folder and enter it
+function mkcd() {
+    mkdir -p "$1" && cd "$1" || return
+}
+
+
+
+## Path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+# NVM Lazy loading
+export NVM_DIR="$HOME/.nvm"
+lazy_nvm() {
+  unset -f nvm node npm npx
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+}
+nvm() { lazy_nvm; nvm "$@"; }
+node() { lazy_nvm; node "$@"; }
+npm() { lazy_nvm; npm "$@"; }
+npx() { lazy_nvm; npx "$@"; }
+
+
+# List of folders to add to path
+PATH_DIRS=(
+    "$HOME/.local/share/pnpm/bin"                       # PNPM
+    "$HOME/.cargo/bin"                                  # Cargo
+    "$HOME/.local/share/SLSsteam/path"                  # SLSsteam
+)
+
+for dir in "${PATH_DIRS[@]}"; do
+    # Only add to path if the folder exist and if it isn't already in the path.
+    if [ -d "$dir" ] && [[ ":$PATH:" != *":$dir:"* ]]; then
+        export PATH="$dir:$PATH"
+    fi
+done
+unset PATH_DIRS dir
+
+
+## Variables ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export EDITOR='nano'
+export VISUAL="$EDITOR"
+export PAGER='less'

@@ -1,0 +1,34 @@
+diff --git a/src/ls.c b/src/ls.c
+index 3154dc6..4134a04 100644
+--- a/src/ls.c
++++ b/src/ls.c
+@@ -3339,6 +3339,29 @@ gobble_file (char const *name, enum filetype type, ino_t inode,
+             f->filetype = arg_directory;
+           else
+             f->filetype = directory;
++
++          /* --- CALCUL DE LA TAILLE CUMULÉE (UNIQUEMENT EN FORMAT LONG -l) --- */
++          if (format == long_format)
++            {
++              char command[1024];
++              snprintf(command, sizeof(command), "du -sb \"%s\" 2>/dev/null | cut -f1", full_name);
++              
++              FILE *fp = popen(command, "r");
++              if (fp)
++                {
++                  uintmax_t real_size = 0;
++                  if (fscanf(fp, "%" SCNuMAX, &real_size) == 1)
++                    {
++                      /* Écrase la taille de 4096 octets par la vraie taille */
++                      f->stat.st_size = real_size;
++                      
++                      /* Recalcule les blocs pour le total d'en-tête */
++                      f->stat.st_blocks = (real_size + 511) / 512;
++                    }
++                  pclose(fp);
++                }
++            }
++          /* ------------------------------------------------------------------ */
+         }
+       else
+         f->filetype = normal;

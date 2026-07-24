@@ -1,0 +1,37 @@
+add_newline = false
+
+# Format principal
+format = """
+${custom.user}\
+[](bg:#5fafff fg:#5fff5f)\
+$directory\
+[](bg:#444444 fg:#5fafff)\
+$git_branch\
+[](fg:#444444)
+$character"""
+
+# Custom module to display $USER@$HOSTNAME in green
+[custom.user]
+command = "echo $USER@$HOSTNAME"
+when = true
+style = "bg:#5fff5f fg:#000000"
+format = "[ $output ]($style)"
+
+# Current directory in blue
+[directory]
+style = "bg:#5fafff fg:#000000"
+format = "[ $path ]($style)"
+truncation_length = 0
+
+# Current git branch in grey
+[git_branch]
+style = "bg:#444444 fg:#ffffff"
+format = "[ $symbol$branch ]($style)"
+symbol = ""
+
+[git_status]
+disabled = true
+
+[character]
+success_symbol = " [⤷](bold) [\\$](bold green) "
+error_symbol = " [⤷](bold) [\\$](bold red) "
