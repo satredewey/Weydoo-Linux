@@ -83,7 +83,7 @@ alias ....='cd ../../..'
 # Git
 alias gitlog='git log --graph --oneline --stat'
 alias gitst='git status'
-alias gitcommit='git add .; git commit -m '
+alias gitcommit='git commit -m '
 
 alias mkdir='mkdir -p' # Create all the parent directory
 alias free='free -m' # RAM usage in Mo
