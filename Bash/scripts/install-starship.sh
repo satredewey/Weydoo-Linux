@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if command -v starship &> /dev/null; then
-    echo "starship already installed" >&2
+    echo "Starship already installed" >&2
     echo "Just installing config"
 else
     sudo apt install -y curl

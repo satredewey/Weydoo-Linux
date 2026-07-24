@@ -27,8 +27,7 @@ case "$TERM" in
 esac
 
 # Set the PS1
-if [ "$color_prompt" = yes ]; then
-    # PS1='\[\e[48;5;10;38;5;16m\] \u@\h \[\e[48;5;75;38;5;10m\]\[\e[48;5;75;38;5;16m\] \w $(git branch 2>/dev/null | sed -e '\''/^[^*]/d'\'' -e '\''s/* \(.*\)/\[\e[48;5;238;38;5;75m\]\[\e[48;5;238;38;5;255m\] \1 \[\e[0;38;5;238m\]/'\'')$(git rev-parse --is-inside-work-tree >/dev/null 2>&1 || echo -n "\[\e[0;38;5;75m\]")\[\e[0m\] \$ '
+if [ "$color_prompt" = yes ] && command -v starship &> /dev/null; then
     eval "$(starship init bash)"
 else
     PS1='\u@\h:\w\$ ' # Not colored
