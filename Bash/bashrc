@@ -5,9 +5,14 @@ HISTSIZE=10000 # History size
 HISTFILESIZE=10000 # History's file size
 HISTTIMEFORMAT="%F %T " # Date format (ex: 2026-07-23 18:30:00)
 export HISTFILE="$HOME/.bash_history" # Change the default location of the bash history file
-export HISTIGNORE="history:cd *:ls *:pwd" # Don't add these commands to history
+export HISTIGNORE="history:pwd" # Don't add these commands to history
 
+if command -v fzf &> /dev/null; then
+    # Enable keyboard shortcuts (Ctrl+R, Alt+C) and auto-completion with fzf
+    eval "$(fzf --bash)"
 
+    export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --inline-info"
+fi
 
 
 ## Console ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -71,14 +76,30 @@ export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quo
 
 
 ## Aliases ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-alias ll='ls -lh'
-alias lla='ls -lah'
-alias la='ls -Ah'
-alias l='ls -CFh'
+if command -v eza &> /dev/null; then
+    alias ls='eza --icons=auto --group-directories-first'
+    alias l='eza -1 --icons=auto'
+    alias ll='eza -lh --git --icons=auto --group-directories-first'
+    alias la='eza -a --icons=auto --group-directories-first'
+    alias lla='eza -lah --git --icons=auto --group-directories-first'
+    alias lld='eza -lh --git --total-size --icons=auto --group-directories-first'
+    
+    # Tree view (replaces the 'tree' command)
+    alias lt='eza --tree --level=2 --icons=auto'
+    alias lta='eza --tree --level=2 --icons=auto -a'
+else
+    alias ll='ls -lh'
+    alias la='ls -Ah'
+    alias lla='ls -lah'
+    alias l='ls -CFh'
+fi
+
+alias clearls='clear && ls'
 
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
+alias cd_='cd /'
 
 # Git
 alias gitlog='git log --graph --oneline --stat'
@@ -195,6 +216,7 @@ PATH_DIRS=(
     "$HOME/.local/share/pnpm/bin"                       # PNPM
     "$HOME/.cargo/bin"                                  # Cargo
     "$HOME/.local/share/SLSsteam/path"                  # SLSsteam
+    "$HOME/.bun/bin"
 )
 
 for dir in "${PATH_DIRS[@]}"; do
@@ -210,3 +232,6 @@ unset PATH_DIRS dir
 export EDITOR='nano'
 export VISUAL="$EDITOR"
 export PAGER='less'
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
