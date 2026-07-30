@@ -14,17 +14,20 @@ title = """
 """
 translation_key = {"ok": "< OK >", "exit": "Exit"}
 
-BASE_OPTIONS = ["1. Check truecolors", "2. Install .bashrc", "3. Install Eza", f"4. {translation_key['exit']}"]
+BASE_OPTIONS = [
+    "1. Check truecolors",
+    "2. Install .bashrc",
+    "3. Install Eza",
+    "4. Install Starship",
+]
+BASE_OPTIONS.append(f"{len(BASE_OPTIONS) + 1}. {translation_key['exit']}")
 options = list(BASE_OPTIONS)
 
 
 def exec_sudo_command_in_curses(password, cmd):
     full_cmd = ["sudo", "-S"] + cmd
     res = subprocess.run(
-        full_cmd,
-        input=f"{password}\n",
-        capture_output=True,
-        text=True
+        full_cmd, input=f"{password}\n", capture_output=True, text=True
     )
     return res.returncode == 0, res.stdout or res.stderr
 
@@ -49,11 +52,11 @@ def get_password(stdscr):
                 y, x = stdscr.getyx()
                 stdscr.move(y, x - 1)
                 stdscr.delch()
-        elif ch in (ord('q'), ord('Q')) and not pwd:
+        elif ch in (ord("q"), ord("Q")) and not pwd:
             return None
         elif 32 <= ch <= 126:  # Caractères imprimables
             pwd.append(chr(ch))
-            stdscr.addch('*')
+            stdscr.addch("*")
         stdscr.refresh()
 
     return "".join(pwd)
@@ -72,7 +75,12 @@ def draw_centered(stdscr, y, text, attr=curses.A_NORMAL, color_pair=0):
 
 class Install:
     def __init__(self):
-        self.installed = {"truecolor": None, "bashrc": None, "eza": None}
+        self.installed = {
+            "truecolor": None,
+            "bashrc": None,
+            "eza": None,
+            "starship": None,
+        }
 
     def truecolor(self, stdscr):
         stdscr.erase()
@@ -83,15 +91,31 @@ class Install:
             max_colors = curses.COLORS
             self.installed["truecolor"] = max_colors >= 256
             if self.installed["truecolor"]:
-                draw_centered(stdscr, len(title) + 4, "Truecolors supported", curses.A_BOLD, 1)
+                draw_centered(
+                    stdscr, len(title) + 4, "Truecolors supported", curses.A_BOLD, 1
+                )
                 options[0] = f"{BASE_OPTIONS[0]} - Supported"
             else:
-                draw_centered(stdscr, len(title) + 4, "Truecolors not supported", curses.A_BOLD, 2)
+                draw_centered(
+                    stdscr, len(title) + 4, "Truecolors not supported", curses.A_BOLD, 2
+                )
                 options[0] = f"{BASE_OPTIONS[0]} - Not Supported"
         elif self.installed["truecolor"]:
-            draw_centered(stdscr, len(title) + 4, "Truecolors already checked, supported", curses.A_BOLD, 1)
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Truecolors already checked, supported",
+                curses.A_BOLD,
+                1,
+            )
         else:
-            draw_centered(stdscr, len(title) + 4, "Truecolors already checked, not supported", curses.A_BOLD, 2)
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Truecolors already checked, not supported",
+                curses.A_BOLD,
+                2,
+            )
 
         draw_centered(stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE)
         stdscr.refresh()
@@ -108,7 +132,11 @@ class Install:
                 stdscr.erase()
                 for i, line in enumerate(title):
                     draw_centered(stdscr, 1 + i, line)
-                draw_centered(stdscr, len(title) + 4, "Truecolor not checked, do you want to check it ?")
+                draw_centered(
+                    stdscr,
+                    len(title) + 4,
+                    "Truecolor not checked, do you want to check it ?",
+                )
 
                 for i, option in enumerate(["< Yes >", "< No >"]):
                     attr = curses.A_REVERSE if i == current_option else curses.A_NORMAL
@@ -178,8 +206,16 @@ class Install:
             stdscr.erase()
             for i, line in enumerate(title):
                 draw_centered(stdscr, 1 + i, line)
-            draw_centered(stdscr, len(title) + 4, "Eza is already installed on your system!", curses.A_BOLD, 1)
-            draw_centered(stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE)
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Eza is already installed on your system!",
+                curses.A_BOLD,
+                1,
+            )
+            draw_centered(
+                stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE
+            )
             stdscr.refresh()
             while True:
                 if stdscr.getch() in (10, 13):
@@ -193,11 +229,15 @@ class Install:
         stdscr.erase()
         for i, line in enumerate(title):
             draw_centered(stdscr, 1 + i, line)
-        draw_centered(stdscr, len(title) + 4, "Installing Eza via APT...", curses.A_BOLD)
+        draw_centered(
+            stdscr, len(title) + 4, "Installing Eza via APT...", curses.A_BOLD
+        )
         stdscr.refresh()
 
         exec_sudo_command_in_curses(password, ["apt-get", "update", "-y"])
-        success, output = exec_sudo_command_in_curses(password, ["apt-get", "install", "-y", "eza"])
+        success, output = exec_sudo_command_in_curses(
+            password, ["apt-get", "install", "-y", "eza"]
+        )
 
         self.installed["eza"] = success
 
@@ -206,10 +246,84 @@ class Install:
             draw_centered(stdscr, 1 + i, line)
 
         if success:
-            draw_centered(stdscr, len(title) + 4, "Eza installed successfully!", curses.A_BOLD, 1)
+            draw_centered(
+                stdscr, len(title) + 4, "Eza installed successfully!", curses.A_BOLD, 1
+            )
             options[2] = f"{BASE_OPTIONS[2]} - Installed"
         else:
-            draw_centered(stdscr, len(title) + 4, "Failed to install Eza", curses.A_BOLD, 2)
+            draw_centered(
+                stdscr, len(title) + 4, "Failed to install Eza", curses.A_BOLD, 2
+            )
+            draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
+
+        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
+        stdscr.refresh()
+
+        while True:
+            key = stdscr.getch()
+            if key in (10, 13):
+                break
+
+    def starship(self, stdscr):
+        if shutil.which("starship"):
+            self.installed["starship"] = True
+
+        if self.installed["starship"] is True:
+            stdscr.erase()
+            for i, line in enumerate(title):
+                draw_centered(stdscr, 1 + i, line)
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Starship is already installed on your system!",
+                curses.A_BOLD,
+                1,
+            )
+            draw_centered(
+                stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE
+            )
+            stdscr.refresh()
+            while True:
+                if stdscr.getch() in (10, 13):
+                    break
+            return
+
+        password = get_password(stdscr)
+        if not password:
+            return
+
+        stdscr.erase()
+        for i, line in enumerate(title):
+            draw_centered(stdscr, 1 + i, line)
+        draw_centered(
+            stdscr, len(title) + 4, "Installing Starship via APT...", curses.A_BOLD
+        )
+        stdscr.refresh()
+
+        exec_sudo_command_in_curses(password, ["apt-get", "update", "-y"])
+        success, output = exec_sudo_command_in_curses(
+            password, ["apt-get", "install", "-y", "starship"]
+        )
+
+        self.installed["starship"] = success
+
+        stdscr.erase()
+        for i, line in enumerate(title):
+            draw_centered(stdscr, 1 + i, line)
+
+        if success:
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Starship installed successfully!",
+                curses.A_BOLD,
+                1,
+            )
+            options[2] = f"{BASE_OPTIONS[2]} - Installed"
+        else:
+            draw_centered(
+                stdscr, len(title) + 4, "Failed to install Starship", curses.A_BOLD, 2
+            )
             draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
 
         draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
@@ -250,16 +364,21 @@ def main(stdscr):
                 if install.installed["truecolor"] is True:
                     color = 1
                 elif install.installed["truecolor"] is False:
-                    color = 2
-            elif i == 1:
+                    color = 0
+            elif i == 1 and install.installed["truecolor"] is True:
                 if install.installed["bashrc"] is True:
                     color = 1
                 elif install.installed["bashrc"] is False:
                     color = 2
-            elif i == 2:
+            elif i == 2 and install.installed["truecolor"] is True:
                 if install.installed["eza"] is True:
                     color = 1
                 elif install.installed["eza"] is False:
+                    color = 2
+            elif i == 3 and install.installed["truecolor"] is True:
+                if install.installed["starship"] is True:
+                    color = 1
+                elif install.installed["starship"] is False:
                     color = 2
 
             draw_centered(stdscr, len(title) + 3 + i, option, attr, color)
@@ -280,9 +399,9 @@ def main(stdscr):
                 case 3:
                     install.eza(stdscr)
                 case 4:
-                    running = False
+                    install.starship(stdscr)
                 case _:
-                    pass
+                    running = False
         elif key in (ord("q"), ord("Q")):
             running = False
 
