@@ -26,13 +26,19 @@ options = list(BASE_OPTIONS)
 
 
 def run_command_with_curses_exit(stdscr, cmd):
-    """
-    Quitte temporairement curses pour laisser l'utilisateur utiliser sudo / le TTY standard proprement.
-    """
     curses.endwin()
-    print(f"\n---> Executing: {' '.join(cmd)}\n")
+
+    if cmd[0] == "sudo" and not shutil.which("sudo"):
+        real_cmd = cmd[1:]
+        formatted_cmd = " ".join(f"'{arg}'" if " " in arg else arg for arg in real_cmd)
+        final_cmd = ["su", "-", "-c", formatted_cmd]
+        print("\n[NOTE] 'sudo' not found. Changed to 'su'.\n")
+    else:
+        final_cmd = cmd
+
+    print(f"---> Executing: {' '.join(final_cmd)}\n")
     try:
-        res = subprocess.run(cmd, check=True)
+        res = subprocess.run(final_cmd, check=True)
         success = res.returncode == 0
         output = "Execution succeeded"
     except subprocess.CalledProcessError as e:
