@@ -2,6 +2,6 @@
     {
         "key": "ctrl+r",
         "command": "workbench.action.tasks.runTask",
-        "args": "Run in Ptyxis"
+        "args": "Run Python"
     }
 ]

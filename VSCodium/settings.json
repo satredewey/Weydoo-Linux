@@ -63,11 +63,5 @@
                 }
             }
         ]
-    },
-    "code-runner.executorMap": {
-        "python": "flatpak-spawn --host ptyxis -- bash -c \"cd '$dir' && python3 '$fileName'\" > /dev/null 2>&1 &",
-        "java": "flatpak-spawn --host ptyxis -- bash -c \"cd '$dir' && javac '$fileName' && java '$fileNameWithoutExt'\" > /dev/null 2>&1 &",
-        "bash": "flatpak-spawn --host ptyxis -- bash -c \"cd '$dir' && bash '$fileName'\" > /dev/null 2>&1 &"
-    },
-    "code-runner.saveAllFilesBeforeRun": true
+    }
 }

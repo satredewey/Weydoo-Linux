@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run in Ptyxis",
+            "label": "Run Python",
             "type": "shell",
             "command": "flatpak-spawn --host ptyxis -- bash -c \"cd '${fileDirname}' && python3 '${fileBasename}'\"",
             "presentation": {
