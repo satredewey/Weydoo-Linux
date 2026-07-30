@@ -1,6 +1,7 @@
 import curses
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 title = """
@@ -24,42 +25,25 @@ BASE_OPTIONS.append(f"{len(BASE_OPTIONS) + 1}. {translation_key['exit']}")
 options = list(BASE_OPTIONS)
 
 
-def exec_sudo_command_in_curses(password, cmd):
-    full_cmd = ["sudo", "-S"] + cmd
-    res = subprocess.run(
-        full_cmd, input=f"{password}\n", capture_output=True, text=True
-    )
-    return res.returncode == 0, res.stdout or res.stderr
-
-
-def get_password(stdscr):
-    stdscr.erase()
-    for i, line in enumerate(title):
-        draw_centered(stdscr, 1 + i, line)
-
-    curses.echo(False)
-    draw_centered(stdscr, len(title) + 3, "Enter Sudo Password: ", curses.A_BOLD)
+def run_command_with_curses_exit(stdscr, cmd):
+    """
+    Quitte temporairement curses pour laisser l'utilisateur utiliser sudo / le TTY standard proprement.
+    """
+    curses.endwin()
+    print(f"\n---> Executing: {' '.join(cmd)}\n")
+    try:
+        res = subprocess.run(cmd, check=True)
+        success = res.returncode == 0
+        output = "Execution succeeded"
+    except subprocess.CalledProcessError as e:
+        success = False
+        output = f"Command failed with exit code {e.returncode}"
+    except Exception as e:
+        success = False
+        output = str(e)
+        
     stdscr.refresh()
-
-    pwd = []
-    while True:
-        ch = stdscr.getch()
-        if ch in (10, 13):  # Entrée
-            break
-        elif ch in (curses.KEY_BACKSPACE, 127, 8):
-            if pwd:
-                pwd.pop()
-                y, x = stdscr.getyx()
-                stdscr.move(y, x - 1)
-                stdscr.delch()
-        elif ch in (ord("q"), ord("Q")) and not pwd:
-            return None
-        elif 32 <= ch <= 126:  # Caractères imprimables
-            pwd.append(chr(ch))
-            stdscr.addch("*")
-        stdscr.refresh()
-
-    return "".join(pwd)
+    return success, output
 
 
 def draw_centered(stdscr, y, text, attr=curses.A_NORMAL, color_pair=0):
@@ -156,17 +140,37 @@ class Install:
                 elif key in (ord("q"), ord("Q")):
                     return
 
-        src_path = Path(__file__).resolve().parent / "../bashrc"
+        script_dir = Path(__file__).resolve().parent
+        candidates = [
+            script_dir / "bashrc",
+            script_dir.parent / "bashrc",
+            script_dir.parent / "Bash" / "bashrc",
+        ]
+
+        src_path = None
+        for cand in candidates:
+            if cand.exists():
+                src_path = cand
+                break
+
         dst_path = Path.home() / ".bashrc"
 
         success = False
-        try:
-            shutil.copy(src=src_path, dst=dst_path)
-            success = True
-            self.installed["bashrc"] = True
-        except Exception as e:
+        error_msg = ""
+        if src_path:
+            try:
+                if dst_path.exists():
+                    shutil.copy(dst_path, dst_path.with_suffix(".bak"))
+                shutil.copy(src=src_path, dst=dst_path)
+                success = True
+                self.installed["bashrc"] = True
+                options[1] = f"{BASE_OPTIONS[1]} - Installed"
+            except Exception as e:
+                self.installed["bashrc"] = False
+                error_msg = f"Error: {e}"
+        else:
             self.installed["bashrc"] = False
-            error_msg = f"Error: {e}"
+            error_msg = "Error: File 'bashrc' not found in project root"
 
         stdscr.erase()
         for i, line in enumerate(title):
@@ -222,22 +226,14 @@ class Install:
                     break
             return
 
-        password = get_password(stdscr)
-        if not password:
-            return
-
-        stdscr.erase()
-        for i, line in enumerate(title):
-            draw_centered(stdscr, 1 + i, line)
-        draw_centered(
-            stdscr, len(title) + 4, "Installing Eza via APT...", curses.A_BOLD
+        success, output = run_command_with_curses_exit(
+            stdscr, ["sudo", "apt-get", "update"]
         )
+        if success:
+            success, output = run_command_with_curses_exit(
+                stdscr, ["sudo", "apt-get", "install", "-y", "eza"]
+            )
         stdscr.refresh()
-
-        exec_sudo_command_in_curses(password, ["apt-get", "update", "-y"])
-        success, output = exec_sudo_command_in_curses(
-            password, ["apt-get", "install", "-y", "eza"]
-        )
 
         self.installed["eza"] = success
 
@@ -288,22 +284,16 @@ class Install:
                     break
             return
 
-        password = get_password(stdscr)
-        if not password:
-            return
-
         stdscr.erase()
         for i, line in enumerate(title):
             draw_centered(stdscr, 1 + i, line)
         draw_centered(
-            stdscr, len(title) + 4, "Installing Starship via APT...", curses.A_BOLD
+            stdscr, len(title) + 4, "Installing Starship...", curses.A_BOLD
         )
         stdscr.refresh()
 
-        exec_sudo_command_in_curses(password, ["apt-get", "update", "-y"])
-        success, output = exec_sudo_command_in_curses(
-            password, ["apt-get", "install", "-y", "starship"]
-        )
+        cmd = ["sh", "-c", "curl -sS https://starship.rs/install.sh | sh"]
+        success, output = run_command_with_curses_exit(stdscr, cmd)
 
         self.installed["starship"] = success
 
@@ -319,7 +309,7 @@ class Install:
                 curses.A_BOLD,
                 1,
             )
-            options[2] = f"{BASE_OPTIONS[2]} - Installed"
+            options[3] = f"{BASE_OPTIONS[3]} - Installed"
         else:
             draw_centered(
                 stdscr, len(title) + 4, "Failed to install Starship", curses.A_BOLD, 2
