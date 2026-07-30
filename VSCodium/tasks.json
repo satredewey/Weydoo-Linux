@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run in Ptyxis",
+            "type": "shell",
+            "command": "flatpak-spawn --host ptyxis -- bash -c \"cd '${fileDirname}' && python3 '${fileBasename}'\"",
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "problemMatcher": []
+        }
+    ]
+}

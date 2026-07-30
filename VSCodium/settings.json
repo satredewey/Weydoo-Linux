@@ -1,0 +1,73 @@
+{
+    "redhat.telemetry.enabled": false,
+    "workbench.startupEditor": "none",
+    "workbench.iconTheme": "material-icon-theme",
+    "workbench.colorTheme": "Dark Modern",
+    "workbench.editor.closeOnFileDelete": true,
+    "workbench.colorCustomizations": {
+        "sideBar.background": "#0f0f0f",
+        "activityBar.background": "#0f0f0f",
+        "editor.background": "#000000"
+    },
+    "explorer.compactFolders": false,
+    "explorer.confirmDragAndDrop": false,
+    "files.autoSave": "onFocusChange",
+    "files.exclude": {
+        "**/.**/**": true
+    },
+    "files.associations": {
+        "*bashrc*": "shellscript"
+    },
+    "security.workspace.trust.untrustedFiles": "open",
+    "security.workspace.trust.enabled": false,
+    "editor.unicodeHighlight.nonBasicASCII": true,
+    "editor.showUnused": false,
+    "editor.fontFamily": "JetBrainsMono Nerd Font",
+    "editor.fontWeight": "bold",
+    "editor.semanticHighlighting.enabled": false,
+    "editor.unicodeHighlight.includeStrings": false,
+    "editor.mouseWheelZoom": true,
+    "[json][jsonc][jsonl]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": [
+                    "source.python"
+                ],
+                "settings": {
+                    "foreground": "#a9e8ff"
+                }
+            },
+            {
+                "scope": [
+                    "meta.function-call.generic.python",
+                    "meta.function-call.python",
+                    "meta.member.access.python"
+                ],
+                "settings": {
+                    "foreground": "#9CDCFE"
+                }
+            },
+            {
+                "scope": [
+                    "variable.parameter.function.language.python",
+                    "variable.parameter.function.language.special.self.python"
+                ],
+                "settings": {
+                    "foreground": "#f5ff8b"
+                }
+            }
+        ]
+    },
+    "code-runner.executorMap": {
+        "python": "flatpak-spawn --host ptyxis -- bash -c \"cd '$dir' && python3 '$fileName'\" > /dev/null 2>&1 &",
+        "java": "flatpak-spawn --host ptyxis -- bash -c \"cd '$dir' && javac '$fileName' && java '$fileNameWithoutExt'\" > /dev/null 2>&1 &",
+        "bash": "flatpak-spawn --host ptyxis -- bash -c \"cd '$dir' && bash '$fileName'\" > /dev/null 2>&1 &"
+    },
+    "code-runner.saveAllFilesBeforeRun": true
+}
