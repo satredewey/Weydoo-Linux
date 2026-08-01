@@ -10,7 +10,7 @@ title = """
 ██║ █╗ ██║█████╗   ╚████╔╝ ██║  ██║██║   ██║██║   ██║    ██████╔╝███████║███████╗███████║    ██║     ██║   ██║██╔██╗ ██║█████╗  ██║██║  ███╗
 ██║███╗██║██╔══╝    ╚██╔╝  ██║  ██║██║   ██║██║   ██║    ██╔══██╗██╔══██║╚════██║██╔══██║    ██║     ██║   ██║██║╚██╗██║██╔══╝  ██║██║   ██║
 ╚███╔███╔╝███████╗   ██║   ██████╔╝╚██████╔╝╚██████╔╝    ██████╔╝██║  ██║███████║██║  ██║    ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
- ╚══╝╚══╝ ╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝ 
+ ╚══╝╚══╝ ╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═════╝ ╚═════╝ ╚══╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝ 
                                                                                                                                             
 """
 translation_key = {"ok": "< OK >", "exit": "Exit"}
@@ -20,6 +20,7 @@ BASE_OPTIONS = [
     "2. Install .bashrc",
     "3. Install Eza",
     "4. Install Starship",
+    "5. Install Docker",
 ]
 BASE_OPTIONS.append(f"{len(BASE_OPTIONS) + 1}. {translation_key['exit']}")
 options = list(BASE_OPTIONS)
@@ -47,7 +48,9 @@ def run_command_with_curses_exit(stdscr, cmd):
     except Exception as e:
         success = False
         output = str(e)
-        
+
+    stdscr.clear()
+    curses.curs_set(0)
     stdscr.refresh()
     return success, output
 
@@ -66,35 +69,40 @@ def draw_centered(stdscr, y, text, attr=curses.A_NORMAL, color_pair=0):
 class Install:
     def __init__(self):
         self.installed = {
-            "truecolor": None,
+            "truecolor": curses.has_colors() and curses.COLORS >= 256,
             "bashrc": None,
-            "eza": None,
-            "starship": None,
+            "eza": True if shutil.which("eza") else None,
+            "starship": True if shutil.which("starship") else None,
+            "docker": True if shutil.which("docker") else None,
         }
+        self._update_options(BASE_OPTIONS)
+
+    def _update_options(self, base_options):
+        mapping = {
+            0: ("truecolor", {True: "Supported", False: "Not Supported"}),
+            1: ("bashrc", {True: "Installed", False: "Failed"}),
+            2: ("eza", {True: "Installed", False: "Failed"}),
+            3: ("starship", {True: "Installed", False: "Failed"}),
+            4: ("docker", {True: "Installed", False: "Failed"}),
+        }
+
+        for idx, (key, status_map) in mapping.items():
+            state = self.installed.get(key)
+            if state in status_map:
+                options[idx] = f"{base_options[idx]} - {status_map[state]}"
+            else:
+                options[idx] = base_options[idx]
 
     def truecolor(self, stdscr):
         stdscr.erase()
         for i, line in enumerate(title):
             draw_centered(stdscr, 1 + i, line)
 
-        if self.installed["truecolor"] is None:
-            max_colors = curses.COLORS
-            self.installed["truecolor"] = max_colors >= 256
-            if self.installed["truecolor"]:
-                draw_centered(
-                    stdscr, len(title) + 4, "Truecolors supported", curses.A_BOLD, 1
-                )
-                options[0] = f"{BASE_OPTIONS[0]} - Supported"
-            else:
-                draw_centered(
-                    stdscr, len(title) + 4, "Truecolors not supported", curses.A_BOLD, 2
-                )
-                options[0] = f"{BASE_OPTIONS[0]} - Not Supported"
-        elif self.installed["truecolor"]:
+        if self.installed["truecolor"]:
             draw_centered(
                 stdscr,
                 len(title) + 4,
-                "Truecolors already checked, supported",
+                "Truecolors supported",
                 curses.A_BOLD,
                 1,
             )
@@ -102,7 +110,7 @@ class Install:
             draw_centered(
                 stdscr,
                 len(title) + 4,
-                "Truecolors already checked, not supported",
+                "Truecolors not supported",
                 curses.A_BOLD,
                 2,
             )
@@ -116,36 +124,6 @@ class Install:
                 break
 
     def bashrc(self, stdscr):
-        if self.installed["truecolor"] is None:
-            current_option = 0
-            while True:
-                stdscr.erase()
-                for i, line in enumerate(title):
-                    draw_centered(stdscr, 1 + i, line)
-                draw_centered(
-                    stdscr,
-                    len(title) + 4,
-                    "Truecolor not checked, do you want to check it ?",
-                )
-
-                for i, option in enumerate(["< Yes >", "< No >"]):
-                    attr = curses.A_REVERSE if i == current_option else curses.A_NORMAL
-                    draw_centered(stdscr, len(title) + 6 + i, option, attr)
-
-                stdscr.refresh()
-                key = stdscr.getch()
-
-                if key == curses.KEY_UP:
-                    current_option = (current_option - 1) % 2
-                elif key == curses.KEY_DOWN:
-                    current_option = (current_option + 1) % 2
-                elif key in (10, 13):
-                    if current_option == 0:
-                        self.truecolor(stdscr)
-                    break
-                elif key in (ord("q"), ord("Q")):
-                    return
-
         script_dir = Path(__file__).resolve().parent
         candidates = [
             script_dir / "bashrc",
@@ -170,13 +148,14 @@ class Install:
                 shutil.copy(src=src_path, dst=dst_path)
                 success = True
                 self.installed["bashrc"] = True
-                options[1] = f"{BASE_OPTIONS[1]} - Installed"
             except Exception as e:
                 self.installed["bashrc"] = False
                 error_msg = f"Error: {e}"
         else:
             self.installed["bashrc"] = False
             error_msg = "Error: File 'bashrc' not found in project root"
+
+        self._update_options(BASE_OPTIONS)
 
         stdscr.erase()
         for i, line in enumerate(title):
@@ -188,7 +167,7 @@ class Install:
                 len(title) + 4,
                 "~/.bashrc Installed successfully!",
                 curses.A_BOLD,
-                1 if self.installed["truecolor"] is True else 0,
+                1,
             )
         else:
             draw_centered(
@@ -196,7 +175,7 @@ class Install:
                 len(title) + 4,
                 "Failed to install ~/.bashrc",
                 curses.A_BOLD,
-                2 if self.installed["truecolor"] is True else 0,
+                2,
             )
             draw_centered(stdscr, len(title) + 5, error_msg[: curses.COLS - 2])
 
@@ -211,6 +190,7 @@ class Install:
     def eza(self, stdscr):
         if shutil.which("eza"):
             self.installed["eza"] = True
+            self._update_options(BASE_OPTIONS)
 
         if self.installed["eza"] is True:
             stdscr.erase()
@@ -239,9 +219,9 @@ class Install:
             success, output = run_command_with_curses_exit(
                 stdscr, ["sudo", "apt-get", "install", "-y", "eza"]
             )
-        stdscr.refresh()
 
         self.installed["eza"] = success
+        self._update_options(BASE_OPTIONS)
 
         stdscr.erase()
         for i, line in enumerate(title):
@@ -251,7 +231,6 @@ class Install:
             draw_centered(
                 stdscr, len(title) + 4, "Eza installed successfully!", curses.A_BOLD, 1
             )
-            options[2] = f"{BASE_OPTIONS[2]} - Installed"
         else:
             draw_centered(
                 stdscr, len(title) + 4, "Failed to install Eza", curses.A_BOLD, 2
@@ -269,6 +248,7 @@ class Install:
     def starship(self, stdscr):
         if shutil.which("starship"):
             self.installed["starship"] = True
+            self._update_options(BASE_OPTIONS)
 
         if self.installed["starship"] is True:
             stdscr.erase()
@@ -293,15 +273,14 @@ class Install:
         stdscr.erase()
         for i, line in enumerate(title):
             draw_centered(stdscr, 1 + i, line)
-        draw_centered(
-            stdscr, len(title) + 4, "Installing Starship...", curses.A_BOLD
-        )
+        draw_centered(stdscr, len(title) + 4, "Installing Starship...", curses.A_BOLD)
         stdscr.refresh()
 
         cmd = ["sh", "-c", "curl -sS https://starship.rs/install.sh | sh"]
         success, output = run_command_with_curses_exit(stdscr, cmd)
 
         self.installed["starship"] = success
+        self._update_options(BASE_OPTIONS)
 
         stdscr.erase()
         for i, line in enumerate(title):
@@ -315,10 +294,82 @@ class Install:
                 curses.A_BOLD,
                 1,
             )
-            options[3] = f"{BASE_OPTIONS[3]} - Installed"
         else:
             draw_centered(
                 stdscr, len(title) + 4, "Failed to install Starship", curses.A_BOLD, 2
+            )
+            draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
+
+        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
+        stdscr.refresh()
+
+        while True:
+            key = stdscr.getch()
+            if key in (10, 13):
+                break
+
+    def docker(self, stdscr):
+        if shutil.which("docker"):
+            self.installed["docker"] = True
+            self._update_options(BASE_OPTIONS)
+
+        if self.installed["docker"] is True:
+            stdscr.erase()
+            for i, line in enumerate(title):
+                draw_centered(stdscr, 1 + i, line)
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Docker is already installed on your system!",
+                curses.A_BOLD,
+                1,
+            )
+            draw_centered(
+                stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE
+            )
+            stdscr.refresh()
+            while True:
+                if stdscr.getch() in (10, 13):
+                    break
+            return
+
+        success, output = run_command_with_curses_exit(
+            stdscr, ["sudo", "apt-get", "update"]
+        )
+        if success:
+            success, output = run_command_with_curses_exit(
+                stdscr,
+                [
+                    "sudo",
+                    "apt-get",
+                    "install",
+                    "-y",
+                    "docker-ce",
+                    "docker-ce-cli",
+                    "containerd.io",
+                    "docker-buildx-plugin",
+                    "docker-compose-plugin",
+                ],
+            )
+
+        self.installed["docker"] = success
+        self._update_options(BASE_OPTIONS)
+
+        stdscr.erase()
+        for i, line in enumerate(title):
+            draw_centered(stdscr, 1 + i, line)
+
+        if success:
+            draw_centered(
+                stdscr,
+                len(title) + 4,
+                "Docker installed successfully!",
+                curses.A_BOLD,
+                1,
+            )
+        else:
+            draw_centered(
+                stdscr, len(title) + 4, "Failed to install Docker", curses.A_BOLD, 2
             )
             draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
 
@@ -356,26 +407,19 @@ def main(stdscr):
             attr = curses.A_REVERSE if i == current_option else curses.A_NORMAL
 
             color = 0
-            if i == 0:
-                if install.installed["truecolor"] is True:
-                    color = 1
-                elif install.installed["truecolor"] is False:
-                    color = 0
-            elif i == 1 and install.installed["truecolor"] is True:
-                if install.installed["bashrc"] is True:
-                    color = 1
-                elif install.installed["bashrc"] is False:
-                    color = 2
-            elif i == 2 and install.installed["truecolor"] is True:
-                if install.installed["eza"] is True:
-                    color = 1
-                elif install.installed["eza"] is False:
-                    color = 2
-            elif i == 3 and install.installed["truecolor"] is True:
-                if install.installed["starship"] is True:
-                    color = 1
-                elif install.installed["starship"] is False:
-                    color = 2
+            key_map = {
+                0: "truecolor",
+                1: "bashrc",
+                2: "eza",
+                3: "starship",
+                4: "docker",
+            }
+            if (
+                i in key_map
+                and install.installed[key_map[i]] is not None
+                and install.installed["truecolor"]
+            ):
+                color = 1 if install.installed[key_map[i]] else 2
 
             draw_centered(stdscr, len(title) + 3 + i, option, attr, color)
 
@@ -396,6 +440,8 @@ def main(stdscr):
                     install.eza(stdscr)
                 case 4:
                     install.starship(stdscr)
+                case 5:
+                    install.docker(stdscr)
                 case _:
                     running = False
         elif key in (ord("q"), ord("Q")):

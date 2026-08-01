@@ -111,7 +111,7 @@ alias free='free -m' # RAM usage in Mo
 alias codium='flatpak run com.vscodium.codium'
 alias ports='sudo netstat -tulanp'
 
-alias temp_linux='docker run --rm -it -e TERM=xterm-256color -e TZ=Europe/Paris ubuntu:latest bash -c "DEBIAN_FRONTEND=noninteractive apt update && DEBIAN_FRONTEND=noninteractive apt install -y sudo git curl tzdata && clear && bash"'
+alias temp_linux='docker run --rm -it -e TERM=xterm-256color temp-ubuntu bash'
 
 
 
