@@ -1,7 +1,6 @@
 import curses
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 title = """
@@ -181,10 +180,6 @@ class Install:
                 break
 
     def eza(self, stdscr):
-        if shutil.which("eza"):
-            self.installed["eza"] = True
-            self._update_options(BASE_OPTIONS)
-
         if self.installed["eza"] is True:
             stdscr.erase()
             for i, line in enumerate(title):
@@ -308,10 +303,6 @@ class Install:
                 break
 
     def docker(self, stdscr):
-        if shutil.which("docker"):
-            self.installed["docker"] = True
-            self._update_options(BASE_OPTIONS)
-
         if self.installed["docker"] is True:
             stdscr.erase()
             for i, line in enumerate(title):
