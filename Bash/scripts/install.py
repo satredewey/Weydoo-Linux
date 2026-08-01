@@ -3,15 +3,21 @@ import shutil
 import subprocess
 from pathlib import Path
 
-title = """
+# --- Chemins constants ---
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASH_DIR = SCRIPT_DIR.parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
+
+# --- Banner ASCII ---
+TITLE_RAW = """
 ██╗    ██╗███████╗██╗   ██╗██████╗  ██████╗  ██████╗     ██████╗  █████╗ ███████╗██╗  ██╗     ██████╗ ██████╗ ███╗   ██╗███████╗██╗ ██████╗ 
 ██║    ██║██╔════╝╚██╗ ██╔╝██╔══██╗██╔═══██╗██╔═══██╗    ██╔══██╗██╔══██╗██╔════╝██║  ██║    ██╔════╝██╔═══██╗████╗  ██║██╔════╝██║██╔════╝ 
 ██║ █╗ ██║█████╗   ╚████╔╝ ██║  ██║██║   ██║██║   ██║    ██████╔╝███████║███████╗███████║    ██║     ██║   ██║██╔██╗ ██║█████╗  ██║██║  ███╗
 ██║███╗██║██╔══╝    ╚██╔╝  ██║  ██║██║   ██║██║   ██║    ██╔══██╗██╔══██║╚════██║██╔══██║    ██║     ██║   ██║██║╚██╗██║██╔══╝  ██║██║   ██║
 ╚███╔███╔╝███████╗   ██║   ██████╔╝╚██████╔╝╚██████╔╝    ██████╔╝██║  ██║███████║██║  ██║    ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
  ╚══╝╚══╝ ╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═════╝ ╚═════╝ ╚══╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝ 
-                                                                                                                                            
-""".strip("\n").split("\n")
+"""
+title = TITLE_RAW.strip("\n").split("\n")
 
 translation_key = {"ok": "< OK >", "exit": "Exit"}
 
@@ -24,10 +30,6 @@ BASE_OPTIONS = [
 ]
 BASE_OPTIONS.append(f"{len(BASE_OPTIONS) + 1}. {translation_key['exit']}")
 options = list(BASE_OPTIONS)
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-BASH_DIR = SCRIPT_DIR.parent
-REPO_ROOT = SCRIPT_DIR.parent.parent
 
 
 def run_command_with_curses_exit(stdscr, cmd):
@@ -97,35 +99,32 @@ class Install:
             else:
                 options[idx] = base_options[idx]
 
-    def truecolor(self, stdscr):
+    def _show_dialog(self, stdscr, message, color_pair=0, subtext=None):
+        """Affiche un dialogue d'information standardisé avec validation OK."""
         stdscr.erase()
         for i, line in enumerate(title):
             draw_centered(stdscr, 1 + i, line)
 
-        if self.installed["truecolor"]:
-            draw_centered(
-                stdscr,
-                len(title) + 4,
-                "Truecolors supported",
-                curses.A_BOLD,
-                1,
-            )
-        else:
-            draw_centered(
-                stdscr,
-                len(title) + 4,
-                "Truecolors not supported",
-                curses.A_BOLD,
-                2,
-            )
+        draw_centered(stdscr, len(title) + 4, message, curses.A_BOLD, color_pair)
 
-        draw_centered(stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE)
+        if subtext:
+            draw_centered(stdscr, len(title) + 5, subtext[: curses.COLS - 2])
+
+        draw_centered(
+            stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE
+        )
         stdscr.refresh()
 
         while True:
             key = stdscr.getch()
             if key in (10, 13):
                 break
+
+    def truecolor(self, stdscr):
+        if self.installed["truecolor"]:
+            self._show_dialog(stdscr, "Truecolors supported", color_pair=1)
+        else:
+            self._show_dialog(stdscr, "Truecolors not supported", color_pair=2)
 
     def bashrc(self, stdscr):
         src_path = BASH_DIR / "bashrc"
@@ -140,65 +139,31 @@ class Install:
                     shutil.copy(dst_path, dst_path.with_suffix(".bak"))
                 shutil.copy(src=src_path, dst=dst_path)
                 success = True
-                self.installed["bashrc"] = True
             except Exception as e:
-                self.installed["bashrc"] = False
                 error_msg = f"Error: {e}"
         else:
-            self.installed["bashrc"] = False
-            error_msg = f"Error: '{str(src_path)}' not found"
+            error_msg = f"Error: '{src_path}' not found"
 
+        self.installed["bashrc"] = success
         self._update_options(BASE_OPTIONS)
 
-        stdscr.erase()
-        for i, line in enumerate(title):
-            draw_centered(stdscr, 1 + i, line)
-
         if success:
-            draw_centered(
-                stdscr,
-                len(title) + 4,
-                "~/.bashrc Installed successfully!",
-                curses.A_BOLD,
-                1,
+            self._show_dialog(
+                stdscr, "~/.bashrc Installed successfully!", color_pair=1
             )
         else:
-            draw_centered(
+            self._show_dialog(
                 stdscr,
-                len(title) + 4,
                 "Failed to install ~/.bashrc",
-                curses.A_BOLD,
-                2,
+                color_pair=2,
+                subtext=error_msg,
             )
-            draw_centered(stdscr, len(title) + 5, error_msg[: curses.COLS - 2])
-
-        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
-        stdscr.refresh()
-
-        while True:
-            key = stdscr.getch()
-            if key in (10, 13):
-                break
 
     def eza(self, stdscr):
         if self.installed["eza"] is True:
-            stdscr.erase()
-            for i, line in enumerate(title):
-                draw_centered(stdscr, 1 + i, line)
-            draw_centered(
-                stdscr,
-                len(title) + 4,
-                "Eza is already installed on your system!",
-                curses.A_BOLD,
-                1,
+            self._show_dialog(
+                stdscr, "Eza is already installed on your system!", color_pair=1
             )
-            draw_centered(
-                stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE
-            )
-            stdscr.refresh()
-            while True:
-                if stdscr.getch() in (10, 13):
-                    break
             return
 
         success, output = run_command_with_curses_exit(
@@ -212,47 +177,20 @@ class Install:
         self.installed["eza"] = success
         self._update_options(BASE_OPTIONS)
 
-        stdscr.erase()
-        for i, line in enumerate(title):
-            draw_centered(stdscr, 1 + i, line)
-
         if success:
-            draw_centered(
-                stdscr, len(title) + 4, "Eza installed successfully!", curses.A_BOLD, 1
-            )
+            self._show_dialog(stdscr, "Eza installed successfully!", color_pair=1)
         else:
-            draw_centered(
-                stdscr, len(title) + 4, "Failed to install Eza", curses.A_BOLD, 2
+            self._show_dialog(
+                stdscr, "Failed to install Eza", color_pair=2, subtext=str(output)
             )
-            draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
-
-        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
-        stdscr.refresh()
-
-        while True:
-            key = stdscr.getch()
-            if key in (10, 13):
-                break
 
     def starship(self, stdscr):
         if self.installed["starship"] is True:
-            stdscr.erase()
-            for i, line in enumerate(title):
-                draw_centered(stdscr, 1 + i, line)
-            draw_centered(
+            self._show_dialog(
                 stdscr,
-                len(title) + 4,
                 "Starship is already installed on your system!",
-                curses.A_BOLD,
-                1,
+                color_pair=1,
             )
-            draw_centered(
-                stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE
-            )
-            stdscr.refresh()
-            while True:
-                if stdscr.getch() in (10, 13):
-                    break
             return
 
         stdscr.erase()
@@ -277,104 +215,48 @@ class Install:
         self.installed["starship"] = success
         self._update_options(BASE_OPTIONS)
 
-        stdscr.erase()
-        for i, line in enumerate(title):
-            draw_centered(stdscr, 1 + i, line)
-
         if success:
-            draw_centered(
-                stdscr,
-                len(title) + 4,
-                "Starship installed successfully!",
-                curses.A_BOLD,
-                1,
+            self._show_dialog(
+                stdscr, "Starship installed successfully!", color_pair=1
             )
         else:
-            draw_centered(
-                stdscr, len(title) + 4, "Failed to install Starship", curses.A_BOLD, 2
+            self._show_dialog(
+                stdscr,
+                "Failed to install Starship",
+                color_pair=2,
+                subtext=str(output),
             )
-            draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
-
-        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
-        stdscr.refresh()
-
-        while True:
-            key = stdscr.getch()
-            if key in (10, 13):
-                break
 
     def docker(self, stdscr):
         if self.installed["docker"] is True:
-            stdscr.erase()
-            for i, line in enumerate(title):
-                draw_centered(stdscr, 1 + i, line)
-            draw_centered(
+            self._show_dialog(
                 stdscr,
-                len(title) + 4,
                 "Docker is already installed on your system!",
-                curses.A_BOLD,
-                1,
+                color_pair=1,
             )
-            draw_centered(
-                stdscr, len(title) + 6, translation_key["ok"], curses.A_REVERSE
-            )
-            stdscr.refresh()
-            while True:
-                if stdscr.getch() in (10, 13):
-                    break
             return
 
         success, output = run_command_with_curses_exit(
-            stdscr, ["sudo", "apt-get", "update"]
+            stdscr, ["sh", "-c", "curl -fsSL https://get.docker.com | sh"]
         )
-        if success:
-            success, output = run_command_with_curses_exit(
-                stdscr,
-                [
-                    "sudo",
-                    "apt-get",
-                    "install",
-                    "-y",
-                    "docker-ce",
-                    "docker-ce-cli",
-                    "containerd.io",
-                    "docker-buildx-plugin",
-                    "docker-compose-plugin",
-                ],
-            )
 
         self.installed["docker"] = success
         self._update_options(BASE_OPTIONS)
 
-        stdscr.erase()
-        for i, line in enumerate(title):
-            draw_centered(stdscr, 1 + i, line)
-
         if success:
-            draw_centered(
-                stdscr,
-                len(title) + 4,
-                "Docker installed successfully!",
-                curses.A_BOLD,
-                1,
+            self._show_dialog(
+                stdscr, "Docker installed successfully!", color_pair=1
             )
         else:
-            draw_centered(
-                stdscr, len(title) + 4, "Failed to install Docker", curses.A_BOLD, 2
+            self._show_dialog(
+                stdscr,
+                "Failed to install Docker",
+                color_pair=2,
+                subtext=str(output),
             )
-            draw_centered(stdscr, len(title) + 5, str(output)[: curses.COLS - 2])
-
-        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
-        stdscr.refresh()
-
-        while True:
-            key = stdscr.getch()
-            if key in (10, 13):
-                break
 
 
 def main(stdscr):
-    global title
     curses.start_color()
     curses.use_default_colors()
     curses.curs_set(0)
