@@ -134,9 +134,18 @@ class Install:
         no_kwargs=None,
     ):
         selected_option = 0
-        yes_args = yes_args or ()
+
+        if yes_args is not None and not isinstance(yes_args, (tuple, list)):
+            yes_args = (yes_args,)
+        else:
+            yes_args = yes_args or ()
+
+        if no_args is not None and not isinstance(no_args, (tuple, list)):
+            no_args = (no_args,)
+        else:
+            no_args = no_args or ()
+
         yes_kwargs = yes_kwargs or {}
-        no_args = no_args or ()
         no_kwargs = no_kwargs or {}
 
         while True:
@@ -321,12 +330,32 @@ class Install:
             )
 
     def docker_image(self, stdscr):
+        if not self.installed["docker"] and shutil.which("docker"):
+            self.installed["docker"] = True
+
         if self.installed["docker"]:
-            pass
+            success, output = run_command_with_curses_exit(
+                stdscr, ["docker", "build", "-t", "temp-ubuntu", str(BASH_DIR)]
+            )
+            self.installed["docker_image"] = success
+            self._update_options(BASE_OPTIONS)
+
+            if success:
+                self._show_dialog(
+                    stdscr, "Docker image generated successfully!", color_pair=1
+                )
+            else:
+                self._show_dialog(
+                    stdscr,
+                    "Failed to generate Docker image",
+                    color_pair=2,
+                    subtext=str(output),
+                )
         else:
             self._show_choice_dialog(
                 stdscr,
                 "You need to install Docker first.",
+                subtext="Do you want to install Docker now?",
                 yes_function=self.docker,
                 yes_args=(stdscr,),
             )
@@ -361,6 +390,7 @@ def main(stdscr):
                 2: "eza",
                 3: "starship",
                 4: "docker",
+                5: "docker_image",
             }
             if (
                 i in key_map
