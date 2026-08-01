@@ -11,7 +11,8 @@ title = """
 ╚███╔███╔╝███████╗   ██║   ██████╔╝╚██████╔╝╚██████╔╝    ██████╔╝██║  ██║███████║██║  ██║    ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
  ╚══╝╚══╝ ╚══════╝   ╚═╝   ╚═════╝  ╚═════╝  ╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═════╝ ╚═════╝ ╚══╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝ 
                                                                                                                                             
-"""
+""".strip("\n").split("\n")
+
 translation_key = {"ok": "< OK >", "exit": "Exit"}
 
 BASE_OPTIONS = [
@@ -378,7 +379,6 @@ def main(stdscr):
     curses.use_default_colors()
     curses.curs_set(0)
 
-    title = title.strip("\n").split("\n")
     current_option = 0
     running = True
 
