@@ -19,7 +19,7 @@ TITLE_RAW = """
 """
 title = TITLE_RAW.strip("\n").split("\n")
 
-translation_key = {"ok": "< OK >", "exit": "Exit"}
+translation_key = {"ok": "< OK >", "exit": "Exit", "yes": "< Yes >", "no": "< No >"}
 
 BASE_OPTIONS = [
     "1. Check truecolors",
@@ -27,6 +27,7 @@ BASE_OPTIONS = [
     "3. Install Eza",
     "4. Install Starship",
     "5. Install Docker",
+    "6. Generate Docker image",
 ]
 BASE_OPTIONS.append(f"{len(BASE_OPTIONS) + 1}. {translation_key['exit']}")
 options = list(BASE_OPTIONS)
@@ -80,6 +81,7 @@ class Install:
             "eza": True if shutil.which("eza") else None,
             "starship": True if shutil.which("starship") else None,
             "docker": True if shutil.which("docker") else None,
+            "docker_image": None,
         }
         self._update_options(BASE_OPTIONS)
 
@@ -90,6 +92,7 @@ class Install:
             2: ("eza", {True: "Installed", False: "Failed"}),
             3: ("starship", {True: "Installed", False: "Failed"}),
             4: ("docker", {True: "Installed", False: "Failed"}),
+            5: ("docker_image", {True: "Generated", False: "Failed"}),
         }
 
         for idx, (key, status_map) in mapping.items():
@@ -100,7 +103,6 @@ class Install:
                 options[idx] = base_options[idx]
 
     def _show_dialog(self, stdscr, message, color_pair=0, subtext=None):
-        """Affiche un dialogue d'information standardisé avec validation OK."""
         stdscr.erase()
         for i, line in enumerate(title):
             draw_centered(stdscr, 1 + i, line)
@@ -110,14 +112,83 @@ class Install:
         if subtext:
             draw_centered(stdscr, len(title) + 5, subtext[: curses.COLS - 2])
 
-        draw_centered(
-            stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE
-        )
+        draw_centered(stdscr, len(title) + 7, translation_key["ok"], curses.A_REVERSE)
         stdscr.refresh()
 
         while True:
             key = stdscr.getch()
             if key in (10, 13):
+                break
+
+    def _show_choice_dialog(
+        self,
+        stdscr,
+        message,
+        color_pair=0,
+        subtext=None,
+        yes_function=None,
+        yes_args=None,
+        yes_kwargs=None,
+        no_function=None,
+        no_args=None,
+        no_kwargs=None,
+    ):
+        selected_option = 0
+        yes_args = yes_args or ()
+        yes_kwargs = yes_kwargs or {}
+        no_args = no_args or ()
+        no_kwargs = no_kwargs or {}
+
+        while True:
+            stdscr.erase()
+            for i, line in enumerate(title):
+                draw_centered(stdscr, 1 + i, line)
+
+            draw_centered(stdscr, len(title) + 4, message, curses.A_BOLD, color_pair)
+
+            if subtext:
+                draw_centered(stdscr, len(title) + 5, subtext[: curses.COLS - 2])
+
+            yes_attr = curses.A_REVERSE if selected_option == 0 else curses.A_NORMAL
+            no_attr = curses.A_REVERSE if selected_option == 1 else curses.A_NORMAL
+
+            max_y, max_x = stdscr.getmaxyx()
+            btn_y = len(title) + 7
+            spacing = 4
+
+            total_width = (
+                len(translation_key["yes"]) + spacing + len(translation_key["no"])
+            )
+            start_x = max(0, (max_x - total_width) // 2)
+
+            if btn_y < max_y - 1:
+                try:
+                    stdscr.addstr(btn_y, start_x, translation_key["yes"], yes_attr)
+                    stdscr.addstr(
+                        btn_y,
+                        start_x + len(translation_key["yes"]) + spacing,
+                        translation_key["no"],
+                        no_attr,
+                    )
+                except curses.error:
+                    pass
+
+            stdscr.refresh()
+            key = stdscr.getch()
+
+            if key in (curses.KEY_LEFT, curses.KEY_RIGHT, 9):  # 9 = Tab
+                selected_option = 1 - selected_option
+            elif key in (10, 13):  # Entrée
+                if selected_option == 0:
+                    if yes_function:
+                        yes_function(*yes_args, **yes_kwargs)
+                else:
+                    if no_function:
+                        no_function(*no_args, **no_kwargs)
+                break
+            elif key in (ord("q"), ord("Q")):
+                if no_function:
+                    no_function(*no_args, **no_kwargs)
                 break
 
     def truecolor(self, stdscr):
@@ -148,9 +219,7 @@ class Install:
         self._update_options(BASE_OPTIONS)
 
         if success:
-            self._show_dialog(
-                stdscr, "~/.bashrc Installed successfully!", color_pair=1
-            )
+            self._show_dialog(stdscr, "~/.bashrc Installed successfully!", color_pair=1)
         else:
             self._show_dialog(
                 stdscr,
@@ -216,9 +285,7 @@ class Install:
         self._update_options(BASE_OPTIONS)
 
         if success:
-            self._show_dialog(
-                stdscr, "Starship installed successfully!", color_pair=1
-            )
+            self._show_dialog(stdscr, "Starship installed successfully!", color_pair=1)
         else:
             self._show_dialog(
                 stdscr,
@@ -244,15 +311,24 @@ class Install:
         self._update_options(BASE_OPTIONS)
 
         if success:
-            self._show_dialog(
-                stdscr, "Docker installed successfully!", color_pair=1
-            )
+            self._show_dialog(stdscr, "Docker installed successfully!", color_pair=1)
         else:
             self._show_dialog(
                 stdscr,
                 "Failed to install Docker",
                 color_pair=2,
                 subtext=str(output),
+            )
+
+    def docker_image(self, stdscr):
+        if self.installed["docker"]:
+            pass
+        else:
+            self._show_choice_dialog(
+                stdscr,
+                "You need to install Docker first.",
+                yes_function=self.docker,
+                yes_args=(stdscr,),
             )
 
 
@@ -314,6 +390,8 @@ def main(stdscr):
                     install.starship(stdscr)
                 case 5:
                     install.docker(stdscr)
+                case 6:
+                    install.docker_image(stdscr)
                 case _:
                     running = False
         elif key in (ord("q"), ord("Q")):
