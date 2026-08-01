@@ -25,6 +25,10 @@ BASE_OPTIONS = [
 BASE_OPTIONS.append(f"{len(BASE_OPTIONS) + 1}. {translation_key['exit']}")
 options = list(BASE_OPTIONS)
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASH_DIR = SCRIPT_DIR.parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
+
 
 def run_command_with_curses_exit(stdscr, cmd):
     curses.endwin()
@@ -124,24 +128,13 @@ class Install:
                 break
 
     def bashrc(self, stdscr):
-        script_dir = Path(__file__).resolve().parent
-        candidates = [
-            script_dir / "bashrc",
-            script_dir.parent / "bashrc",
-            script_dir.parent / "Bash" / "bashrc",
-        ]
-
-        src_path = None
-        for cand in candidates:
-            if cand.exists():
-                src_path = cand
-                break
-
+        src_path = BASH_DIR / "bashrc"
         dst_path = Path.home() / ".bashrc"
 
         success = False
         error_msg = ""
-        if src_path:
+
+        if src_path.is_file():
             try:
                 if dst_path.exists():
                     shutil.copy(dst_path, dst_path.with_suffix(".bak"))
@@ -153,7 +146,7 @@ class Install:
                 error_msg = f"Error: {e}"
         else:
             self.installed["bashrc"] = False
-            error_msg = "Error: File 'bashrc' not found in project root"
+            error_msg = f"Error: '{str(src_path)}' not found"
 
         self._update_options(BASE_OPTIONS)
 
@@ -246,10 +239,6 @@ class Install:
                 break
 
     def starship(self, stdscr):
-        if shutil.which("starship"):
-            self.installed["starship"] = True
-            self._update_options(BASE_OPTIONS)
-
         if self.installed["starship"] is True:
             stdscr.erase()
             for i, line in enumerate(title):
@@ -278,6 +267,16 @@ class Install:
 
         cmd = ["sh", "-c", "curl -sS https://starship.rs/install.sh | sh"]
         success, output = run_command_with_curses_exit(stdscr, cmd)
+
+        if success:
+            cfg_src = BASH_DIR / "starship.toml"
+            cfg_dst_dir = Path.home() / ".config"
+            try:
+                if cfg_src.is_file():
+                    cfg_dst_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy(cfg_src, cfg_dst_dir / "starship.toml")
+            except Exception as e:
+                output = f"Binary installed, but failed to copy config: {e}"
 
         self.installed["starship"] = success
         self._update_options(BASE_OPTIONS)
