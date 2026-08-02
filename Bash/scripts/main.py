@@ -190,6 +190,16 @@ class Install:
             self.installed["docker"] = True
 
         if self.installed["docker"]:
+            helper._show_text(stdscr, "Starting Docker daemon...")
+    
+            if shutil.which("service"):
+                run_command_with_curses_exit(stdscr, ["sudo", "service", "docker", "start"])
+            elif shutil.which("systemctl"):
+                run_command_with_curses_exit(stdscr, ["sudo", "systemctl", "start", "docker"])
+            else:
+                helper._show_dialog(stdscr, "Can't start Docker deamon.")
+                return
+
             cmd = ["sudo", "docker", "build", "-t", "temp-ubuntu", str(BASH_DIR)]
             
             success, output = run_command_with_curses_exit(stdscr, cmd)
