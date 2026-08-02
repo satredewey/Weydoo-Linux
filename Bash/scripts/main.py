@@ -56,7 +56,7 @@ class Install:
             "bashrc": None,
             "eza": True if shutil.which("eza") else None,
             "starship": True if shutil.which("starship") else None,
-            "docker": False if shutil.which("docker") else None,
+            "docker": True if shutil.which("docker") else None,
             "docker_image": None,
         }
 
@@ -186,13 +186,13 @@ class Install:
 
     # Update Done
     def docker_image(self, stdscr=curses.initscr, helper=Helper):
-        if not self.installed["docker"] and shutil.which("docker_"):
+        if shutil.which("docker"):
             self.installed["docker"] = True
 
         if self.installed["docker"]:
-            success, output = run_command_with_curses_exit(
-                stdscr, ["docker", "build", "-t", "temp-ubuntu", str(BASH_DIR)]
-            )
+            cmd = ["sudo", "docker", "build", "-t", "temp-ubuntu", str(BASH_DIR)]
+            
+            success, output = run_command_with_curses_exit(stdscr, cmd)
             self.installed["docker_image"] = success
 
             if success:
@@ -207,12 +207,16 @@ class Install:
                     subtext=str(output),
                 )
         else:
+            def install_and_retry():
+                self.docker(stdscr, helper)
+                if self.installed["docker"]:
+                    self.docker_image(stdscr, helper)
+
             helper._show_choice_dialog(
                 stdscr,
                 "You need to install Docker first.",
                 subtext="Do you want to install Docker now?",
-                yes_function=self.docker,
-                yes_args=(stdscr,),
+                yes_function=install_and_retry,
             )
 
 
