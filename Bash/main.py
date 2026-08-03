@@ -47,17 +47,6 @@ def run_command_with_curses_exit(stdscr, cmd):
     return success, output
 
 
-def draw_centered(stdscr, y, text, attr=curses.A_NORMAL, color_pair=0):
-    max_y, max_x = stdscr.getmaxyx()
-    if y < max_y - 1:
-        x = max(0, (max_x - len(text)) // 2)
-        try:
-            full_attr = attr | curses.color_pair(color_pair)
-            stdscr.addstr(y, x, text[: max_x - 1], full_attr)
-        except curses.error:
-            pass
-
-
 class Install:
     def __init__(self):
         self.installed = {
