@@ -1,12 +1,21 @@
 import curses
 import shutil
 import subprocess
+import sys
 from pathlib import Path
-from helper import *
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-BASH_DIR = SCRIPT_DIR.parent
-REPO_ROOT = SCRIPT_DIR.parent.parent
+BASH_DIR = SCRIPT_DIR
+REPO_ROOT = SCRIPT_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        from helper import *
+    except Exception as e:
+        raise(f"Error while loading helper module: {e}")
+else:
+    raise("Error while loading helper module")
+
 
 
 def run_command_with_curses_exit(stdscr, cmd):
