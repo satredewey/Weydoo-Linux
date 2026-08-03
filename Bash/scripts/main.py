@@ -238,6 +238,9 @@ def main(stdscr=curses.initscr()):
         color_enable=install.installed["truecolor"],
     )
 
+    menu_meta = {
+        "type": "steps"
+    }
     menu = [
         {"type": "title", "text": "Programs"},
         {
@@ -276,8 +279,7 @@ def main(stdscr=curses.initscr()):
             "action": install.docker_image,
             "action_args": [stdscr, helper],
             "id": "docker_image"
-        },
-        {"type": "option", "text": "Exit", "action": helper.stop},
+        }
     ]
 
     helper.menu(stdscr, menu, install)

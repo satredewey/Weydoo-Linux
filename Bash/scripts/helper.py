@@ -13,6 +13,8 @@ class Helper:
 
         curses.init_pair(1, curses.COLOR_GREEN, -1)
         curses.init_pair(2, curses.COLOR_RED, -1)
+        curses.init_pair(3, curses.COLOR_BLUE, -1)
+        curses.color_pair(curses.COLOR_BLACK)
 
         _, max_x = stdscr.getmaxyx()
 
@@ -40,7 +42,7 @@ class Helper:
             except curses.error:
                 pass
 
-    def _draw_menu(self, stdscr, menu, current_selectable_idx, install=None):
+    def _draw_menu(self, stdscr, menu, current_selectable_idx, options_class=None):
         stdscr.erase()
 
         for i, line in enumerate(self.title):
@@ -59,7 +61,7 @@ class Helper:
                     y=y_pos,
                     text=f"--- {item['text']} ---",
                     attr=curses.A_BOLD,
-                    color_pair=2,
+                    color_pair=3,
                 )
             elif item_type == "spacer":
                 self._draw_centered(
@@ -73,11 +75,11 @@ class Helper:
 
                 item_id = str(item.get("id", ""))
                 installed = None
-                if install and hasattr(install, "installed"):
-                    if install.installed.get(item_id) is True:
+                if options_class and hasattr(options_class, "installed"):
+                    if options_class.installed.get(item_id) is True:
                         label += " - Installed"
                         installed = True
-                    elif install.installed.get(item_id) is False:
+                    elif options_class.installed.get(item_id) is False:
                         label += " - Failed"
                         installed = False
 
@@ -177,10 +179,14 @@ class Helper:
             for i, line in enumerate(self.title):
                 self._draw_centered(stdscr, 1 + i, line)
 
-            self._draw_centered(stdscr, len(self.title) + 4, message, curses.A_BOLD, color_pair)
+            self._draw_centered(
+                stdscr, len(self.title) + 4, message, curses.A_BOLD, color_pair
+            )
 
             if subtext:
-                self._draw_centered(stdscr, len(self.title) + 5, subtext[: curses.COLS - 2])
+                self._draw_centered(
+                    stdscr, len(self.title) + 5, subtext[: curses.COLS - 2]
+                )
 
             yes_attr = curses.A_REVERSE if selected_option == 0 else curses.A_NORMAL
             no_attr = curses.A_REVERSE if selected_option == 1 else curses.A_NORMAL
@@ -189,9 +195,7 @@ class Helper:
             btn_y = len(self.title) + 7
             spacing = 4
 
-            total_width = (
-                len("< Yes >") + spacing + len("< No >")
-            )
+            total_width = len("< Yes >") + spacing + len("< No >")
             start_x = max(0, (max_x - total_width) // 2)
 
             if btn_y < max_y - 1:
@@ -227,9 +231,12 @@ class Helper:
     def stop(self):
         self.running = False
 
-    def menu(self, stdscr, menu=None, install=None):
+    def menu(self, stdscr, menu=None, options_class=None):
         if menu is None:
             menu = []
+
+        menu.append({"type": "spacer"})
+        menu.append({"type": "option", "text": "Exit", "action": self.stop})
 
         selectable_items = [
             item for item in menu if item.get("type") not in ("title", "spacer")
@@ -241,7 +248,7 @@ class Helper:
         self.running = True
 
         while self.running:
-            self._draw_menu(stdscr, menu, current_option, install)
+            self._draw_menu(stdscr, menu, current_option, options_class)
             key = stdscr.getch()
 
             if key == curses.KEY_UP:
