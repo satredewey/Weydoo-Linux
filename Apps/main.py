@@ -18,35 +18,6 @@ except Exception as e:
     raise ImportError(f"Error while loading helper module: {e}")
 
 
-def run_command_with_curses_exit(stdscr, cmd):
-    curses.endwin()
-
-    if cmd[0] == "sudo" and not shutil.which("sudo"):
-        real_cmd = cmd[1:]
-        formatted_cmd = " ".join(f"'{arg}'" if " " in arg else arg for arg in real_cmd)
-        final_cmd = ["su", "-", "-c", formatted_cmd]
-        print("\n[NOTE] 'sudo' not found. Changed to 'su'.\n")
-    else:
-        final_cmd = cmd
-
-    print(f"---> Executing: {' '.join(final_cmd)}\n")
-    try:
-        res = subprocess.run(final_cmd, check=True)
-        success = res.returncode == 0
-        output = "Execution succeeded"
-    except subprocess.CalledProcessError as e:
-        success = False
-        output = f"Command failed with exit code {e.returncode}"
-    except Exception as e:
-        success = False
-        output = str(e)
-
-    stdscr.clear()
-    curses.curs_set(0)
-    stdscr.refresh()
-    return success, output
-
-
 class Install:
     def __init__(self):
         self.installed = {"flatpak": False, "chrome": False}
