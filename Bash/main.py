@@ -237,7 +237,7 @@ def main(stdscr=curses.initscr()):
     )
 
     menu_meta = {
-        "type": "steps"
+        "type": "actions"
     }
     menu = [
         {"type": "title", "text": "Programs"},
@@ -280,7 +280,7 @@ def main(stdscr=curses.initscr()):
         }
     ]
 
-    helper.menu(stdscr, menu, install)
+    helper.menu(stdscr, menu, menu_meta, install)
 
 
 if __name__ == "__main__":

@@ -231,40 +231,83 @@ class Helper:
     def stop(self):
         self.running = False
 
-    def menu(self, stdscr, menu=None, options_class=None):
-        if menu is None:
-            menu = []
-
-        menu.append({"type": "spacer"})
-        menu.append({"type": "option", "text": "Exit", "action": self.stop})
-
-        selectable_items = [
-            item for item in menu if item.get("type") not in ("title", "spacer")
-        ]
-        if not selectable_items:
-            return None
-
-        current_option = 0
+    def menu(self, stdscr, menu=None, menu_meta=None, options_class=None):
         self.running = True
 
-        while self.running:
-            self._draw_menu(stdscr, menu, current_option, options_class)
-            key = stdscr.getch()
+        if menu is None:
+            menu = []
+        if menu_meta is None:
+            self.stop()
+            return None
 
-            if key == curses.KEY_UP:
-                current_option = (current_option - 1) % len(selectable_items)
-            elif key == curses.KEY_DOWN or key in (9, ord("\t")):
-                current_option = (current_option + 1) % len(selectable_items)
-            elif key in (10, 13):
-                selected_item = selectable_items[current_option]
-                if "action" in selected_item and callable(selected_item["action"]):
-                    args = selected_item.get("action_args", ())
-                    if not isinstance(args, (list, tuple)):
-                        args = (args,)
-                    selected_item["action"](*args)
-            elif key == ord("c"):
-                self.color_enable = not self.color_enable
-            elif key == ord("q"):
-                self.running = False
+        active_menu = list(menu)
 
+        menu_type = menu_meta.get("type")
+
+        if menu_type == "actions":
+            active_menu.append({"type": "spacer"})
+            active_menu.append(
+                {"type": "option", "text": "Exit", "action": self.stop}
+            )
+
+            selectable_items = [
+                item
+                for item in active_menu
+                if item.get("type") not in ("title", "spacer")
+            ]
+
+            if not selectable_items:
+                return None
+
+            current_option = 0
+
+            while self.running:
+                self._draw_menu(
+                    stdscr, active_menu, current_option, options_class
+                )
+                key = stdscr.getch()
+
+                if key == curses.KEY_UP:
+                    current_option = (current_option - 1) % len(
+                        selectable_items
+                    )
+                elif key == curses.KEY_DOWN or key in (9, ord("\t")):
+                    current_option = (current_option + 1) % len(
+                        selectable_items
+                    )
+
+                elif key in (10, 13):
+                    selected_item = selectable_items[current_option]
+                    action = selected_item.get("action")
+                    if callable(action):
+                        args = selected_item.get("action_args", ())
+                        if not isinstance(args, (list, tuple)):
+                            args = (args,)
+                        action(*args)
+
+                elif key in (ord("c"), ord("C")):
+                    self.color_enable = getattr(self, "color_enable", True)
+                    self.color_enable = not self.color_enable
+                elif key in (ord("q"), ord("Q")):
+                    self.running = False
+
+        elif menu_type == "choices":
+            active_menu.append({"type": "spacer"})
+            active_menu.append(
+                {"type": "option", "text": "Done", "action": self.stop},
+                {"type": "option", "text": "Exit", "action": self.stop}
+            )
+
+            while self.running:
+                self._draw_menu(
+                    stdscr, active_menu, current_option, options_class
+                )
+                key = stdscr.getch()
+
+                if key in (ord("c"), ord("C")):
+                    self.color_enable = getattr(self, "color_enable", True)
+                    self.color_enable = not self.color_enable
+                elif key in (ord("q"), ord("Q")):
+                    self.running = False
+        
         return None
