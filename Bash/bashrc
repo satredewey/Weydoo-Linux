@@ -197,6 +197,18 @@ function mkcd() {
     mkdir -p "$1" && cd "$1" || return
 }
 
+# Automaticaly enable the Python venv
+cd() {
+    if type deactivate >/dev/null 2>&1; then
+        deactivate
+    fi
+    command cd "$@" || return
+
+    if [ -f ".venv/bin/activate" ]; then
+        source .venv/bin/activate
+    fi
+}
+
 
 
 ## Path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
