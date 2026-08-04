@@ -83,6 +83,7 @@ if command -v eza &> /dev/null; then
     alias la='eza -a --icons=auto --group-directories-first'
     alias lla='eza -lah --git --icons=auto --group-directories-first'
     alias lld='eza -lh --git --total-size --icons=auto --group-directories-first'
+    alias llda='eza -lah --git --total-size --icons=auto --group-directories-first'
     
     # Tree view (replaces the 'tree' command)
     alias lt='eza --tree --level=2 --icons=auto'
