@@ -88,15 +88,16 @@ class Helper:
                     and hasattr(options_class, "installed")
                     and menu_type == "actions"
                 ):
-                    color_pair = (
-                        1 if installed == True else 2 if installed == False else 0
-                    )
                     if options_class.installed.get(item_id) is True:
                         label += " - Installed"
                         installed = True
                     elif options_class.installed.get(item_id) is False:
                         label += " - Failed"
                         installed = False
+                        
+                    color_pair = (
+                        1 if installed == True else 2 if installed == False else 0
+                    )
 
                 elif (
                     options_class
