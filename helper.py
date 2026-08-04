@@ -3,6 +3,7 @@ import pyfiglet
 
 
 class Helper:
+
     def __init__(self, title, stdscr=None, color_enable=False):
         if stdscr is None:
             stdscr = curses.initscr()
@@ -42,7 +43,14 @@ class Helper:
             except curses.error:
                 pass
 
-    def _draw_menu(self, stdscr, menu, current_selectable_idx, options_class=None):
+    def _draw_menu(
+        self,
+        stdscr,
+        menu,
+        current_selectable_idx=None,
+        options_class=None,
+        menu_type=None,
+    ):
         stdscr.erase()
 
         for i, line in enumerate(self.title):
@@ -72,16 +80,44 @@ class Helper:
             else:
                 is_selected = selectable_counter == current_selectable_idx
                 label = item.get("text", "")
-
-                item_id = str(item.get("id", ""))
                 installed = None
-                if options_class and hasattr(options_class, "installed"):
+                item_id = str(item.get("id", ""))
+
+                if (
+                    options_class
+                    and hasattr(options_class, "installed")
+                    and menu_type == "actions"
+                ):
+                    color_pair = (
+                        1 if installed == True else 2 if installed == False else 0
+                    )
                     if options_class.installed.get(item_id) is True:
                         label += " - Installed"
                         installed = True
                     elif options_class.installed.get(item_id) is False:
                         label += " - Failed"
                         installed = False
+
+                elif (
+                    options_class
+                    and hasattr(options_class, "to_install")
+                    and menu_type == "choices"
+                ):
+                    is_already_installed = options_class.installed.get(item_id) is True
+                    is_marked_for_install = item_id in options_class.to_install
+
+                    if is_already_installed:
+                        color_pair = 1
+                        if item_type == "choice":
+                            label += " (Installed)"
+                    elif is_marked_for_install:
+                        color_pair = 1
+                        if item_type == "choice":
+                            label += " [*]"
+                    else:
+                        color_pair = 0
+                        if item_type == "choice":
+                            label += " [ ]"
 
                 if is_selected:
                     text_to_display = f"> {label} <"
@@ -95,9 +131,7 @@ class Helper:
                     y=y_pos,
                     text=text_to_display,
                     attr=attr,
-                    color_pair=(
-                        1 if installed == True else 2 if installed == False else 0
-                    ),
+                    color_pair=color_pair,
                 )
 
                 selectable_counter += 1
@@ -241,14 +275,11 @@ class Helper:
             return None
 
         active_menu = list(menu)
-
         menu_type = menu_meta.get("type")
 
         if menu_type == "actions":
             active_menu.append({"type": "spacer"})
-            active_menu.append(
-                {"type": "option", "text": "Exit", "action": self.stop}
-            )
+            active_menu.append({"type": "option", "text": "Exit", "action": self.stop})
 
             selectable_items = [
                 item
@@ -263,18 +294,18 @@ class Helper:
 
             while self.running:
                 self._draw_menu(
-                    stdscr, active_menu, current_option, options_class
+                    stdscr,
+                    active_menu,
+                    current_option,
+                    options_class,
+                    menu_type,
                 )
                 key = stdscr.getch()
 
                 if key == curses.KEY_UP:
-                    current_option = (current_option - 1) % len(
-                        selectable_items
-                    )
+                    current_option = (current_option - 1) % len(selectable_items)
                 elif key == curses.KEY_DOWN or key in (9, ord("\t")):
-                    current_option = (current_option + 1) % len(
-                        selectable_items
-                    )
+                    current_option = (current_option + 1) % len(selectable_items)
 
                 elif key in (10, 13):
                     selected_item = selectable_items[current_option]
@@ -294,20 +325,51 @@ class Helper:
         elif menu_type == "choices":
             active_menu.append({"type": "spacer"})
             active_menu.append(
-                {"type": "option", "text": "Done", "action": self.stop},
-                {"type": "option", "text": "Exit", "action": self.stop}
+                {
+                    "type": "option",
+                    "text": "Done",
+                    "action": options_class._install if options_class else None,
+                    "action_args": [stdscr, self],
+                }
             )
+            active_menu.append({"type": "option", "text": "Exit", "action": self.stop})
+
+            selectable_items = [
+                item
+                for item in active_menu
+                if item.get("type") not in ("title", "spacer")
+            ]
+
+            current_option = 0
 
             while self.running:
                 self._draw_menu(
-                    stdscr, active_menu, current_option, options_class
+                    stdscr,
+                    active_menu,
+                    current_option,
+                    options_class,
+                    menu_type,
                 )
                 key = stdscr.getch()
 
-                if key in (ord("c"), ord("C")):
+                if key == curses.KEY_UP:
+                    current_option = (current_option - 1) % len(selectable_items)
+                elif key == curses.KEY_DOWN or key in (9, ord("\t")):
+                    current_option = (current_option + 1) % len(selectable_items)
+
+                elif key in (10, 13):
+                    selected_item = selectable_items[current_option]
+                    action = selected_item.get("action")
+                    if callable(action):
+                        args = selected_item.get("action_args", ())
+                        if not isinstance(args, (list, tuple)):
+                            args = (args,)
+                        action(*args)
+
+                elif key in (ord("c"), ord("C")):
                     self.color_enable = getattr(self, "color_enable", True)
                     self.color_enable = not self.color_enable
                 elif key in (ord("q"), ord("Q")):
                     self.running = False
-        
+
         return None
